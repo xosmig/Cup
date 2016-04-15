@@ -150,19 +150,28 @@ mod tests {
     fn test_partition() {
         let mut s = [1, 7, 12, 2, 44, 5];
         
-        let mut begin = s.begin();
+        let begin = s.begin();
         let end = s.end();
 
-        let mid = s.partition(begin, end, |x| *x < 12);
+        let mut it1 = begin;
+        it1.step_next(&s);
 
-        while begin != mid {
-            assert!(*begin.as_ref(&s) < 12);
-            begin.step_next(&s);
+        let mut it2 = end;
+        it2.step_prev(&s);
+
+        let mid = s.partition(it1, it2, |x| *x < 12);
+
+        assert_eq!(s[0], 1);
+        assert_eq!(s[5], 5);
+
+        while it1 != mid {
+            assert!(*it1.as_ref(&s) < 12);
+            it1.step_next(&s);
         }
         
-        while begin != end {
-            assert!(*begin.as_ref(&s) >= 12);
-            begin.step_next(&s);
+        while it1 != it2 {
+            assert!(*it1.as_ref(&s) >= 12);
+            it1.step_next(&s);
         }
     }
 }
