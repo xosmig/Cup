@@ -24,7 +24,7 @@ pub trait BidirCupMut: BidirCup {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::Container;
     use super::BidirCup;
     use super::BidirCupMut;
@@ -35,6 +35,7 @@ mod test {
         type Item = T;
     }
 
+    #[derive(Copy)]
     struct SliceCupMut<T> {
         idx: usize,
         phantom: PhantomData<T>,
@@ -126,21 +127,24 @@ mod test {
         assert_eq!(*it3.as_ref(&s), 3);
     }
 
-    fn partition<C: ?Sized, I, P>(c: &mut C, mut first: I, last: I, mut predicate: P) -> I
-        where C: Container,
-              I: BidirCupMut<Cont = C>,
-              P: FnMut(&<I as BidirCup>::Item) -> bool,
-    {
-        let mut mid = first.clone();
-        while first != last {
-            if predicate(first.as_ref(c)) {
-                mid.swap(&first, c);
-                mid.step_next(c);
+    trait Partition: Container {
+        fn partition<I, P>(&mut self, mut first: I, last: I, mut predicate: P) -> I
+            where I: BidirCupMut<Cont = Self>,
+                  P: FnMut(&<I as BidirCup>::Item) -> bool,
+        {
+            let mut mid = first.clone();
+            while first != last {
+                if predicate(first.as_ref(self)) {
+                    mid.swap(&first, self);
+                    mid.step_next(self);
+                }
+                first.step_next(self);
             }
-            first.step_next(c);
+            mid       
         }
-        mid
     }
+
+    impl<T> Partition for [T] {}
 
     #[test]
     fn test_partition() {
@@ -149,10 +153,8 @@ mod test {
         let mut begin = s.begin();
         let end = s.end();
 
-        // strange place
-        // because trait Container should be implemented for [_; T]
-        let mid = partition(((&mut s) as &mut [i32]), begin.clone(), end.clone(), |x| *x < 12); 
-        
+        let mid = s.partition(begin, end, |x| *x < 12);
+
         while begin != mid {
             assert!(*begin.as_ref(&s) < 12);
             begin.step_next(&s);
